@@ -50,6 +50,37 @@ public class PatientsController : ControllerBase
             return StatusCode(500, $"Error creating patient: {ex.Message}");
         }
     }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdatePatient(int id, Patient patient)
+    {
+        if (id != patient.PatientId)
+            return BadRequest("ID in URL does not match patient ID.");
+
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        if (!await _patientRepository.ExistsAsync(id))
+            return NotFound($"Patient with ID {id} not found.");
+
+        if (!await _customerRepository.ExistsAsync(patient.CustomerId))
+            return BadRequest($"Customer with ID {patient.CustomerId} does not exist.");
+
+        if (await _patientRepository.AnimalNameExistsForCustomerAsync(patient.AnimalName, patient.CustomerId, id))
+            return Conflict($"A patient with name '{patient.AnimalName}' already exists for this customer.");
+
+        try
+        {
+            await _patientRepository.UpdateAsync(patient);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error updating patient: {ex.Message}");
+        }
+    }
+
+
     [HttpPost("{id}/foto")]
     public async Task<IActionResult> UploadPhoto(int id, IFormFile photo)
     {

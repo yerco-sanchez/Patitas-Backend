@@ -29,6 +29,14 @@ public class PatientRepository : IPatientRepository
         await _context.SaveChangesAsync();
         return patient;
     }
+
+    public async Task<Patient> UpdateAsync(Patient patient)
+    {
+        _context.Entry(patient).State = EntityState.Modified;
+        await _context.SaveChangesAsync();
+        return patient;
+    }
+
     public async Task<bool> ExistsAsync(int id)
     {
         return await _context.Patients.AnyAsync(p => p.PatientId == id);
