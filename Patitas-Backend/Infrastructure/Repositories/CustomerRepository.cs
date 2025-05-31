@@ -31,6 +31,14 @@ public class CustomerRepository : ICustomerRepository
         await _context.SaveChangesAsync();
         return customer;
     }
+
+    public async Task<Customer> UpdateAsync(Customer customer)
+    {
+        _context.Entry(customer).State = EntityState.Modified;
+        await _context.SaveChangesAsync();
+        return customer;
+    }
+
     public async Task<bool> EmailExistsAsync(string email, int? excludeCustomerId = null)
     {
         var query = _context.Customers.Where(c => c.Email == email);
@@ -47,5 +55,10 @@ public class CustomerRepository : ICustomerRepository
             query = query.Where(c => c.CustomerId != excludeCustomerId.Value);
 
         return await query.AnyAsync();
+    }
+
+    public async Task<bool> ExistsAsync(int id)
+    {
+        return await _context.Customers.AnyAsync(c => c.CustomerId == id);
     }
 }

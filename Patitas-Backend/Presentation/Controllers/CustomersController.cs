@@ -50,4 +50,36 @@ public class CustomersController : ControllerBase
 
         return CreatedAtAction(nameof(GetCustomer), new { id = createdCustomer.CustomerId }, createdCustomer);
     }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateCustomer(int id, Customer customer)
+    {
+        if (id != customer.CustomerId)
+            return BadRequest("ID in URL does not match customer ID.");
+
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var existCustomer = await _repository.ExistsAsync(id);
+
+        if (!existCustomer)
+            return NotFound($"Customer with ID {id} not found.");
+
+        if (await _repository.EmailExistsAsync(customer.Email, id))
+            return Conflict($"A customer with email {customer.Email} already exists.");
+
+        if (await _repository.NationalIdExistsAsync(customer.NationalId, id))
+            return Conflict($"A customer with National ID {customer.NationalId} already exists.");
+
+        try
+        {
+            await _repository.UpdateAsync(customer);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error updating customer: {ex.Message}");
+        }
+    }
+
 }
