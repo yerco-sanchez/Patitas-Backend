@@ -14,16 +14,13 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.7" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Presentation\Controllers\" />
     <Folder Include="Core\DTOs\" />
-    <Folder Include="Core\Interfaces\" />
     <Folder Include="Core\Mappers\" />
-    <Folder Include="Infrastructure\Repositories\" />
-    <Folder Include="Presentation\" />
   </ItemGroup>
 
 </Project>
