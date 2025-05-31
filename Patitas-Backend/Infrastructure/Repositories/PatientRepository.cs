@@ -21,6 +21,11 @@ public class PatientRepository : IPatientRepository
         await _context.SaveChangesAsync();
         return patient;
     }
+    public async Task<bool> ExistsAsync(int id)
+    {
+        return await _context.Patients.AnyAsync(p => p.PatientId == id);
+    }
+
 
     public async Task<bool> AnimalNameExistsForCustomerAsync(string animalName, int customerId, int? excludePatientId = null)
     {
@@ -30,5 +35,15 @@ public class PatientRepository : IPatientRepository
             query = query.Where(p => p.PatientId != excludePatientId.Value);
 
         return await query.AnyAsync();
+    }
+    public async Task<bool> UpdatePhotoAsync(int patientId, string photoUrl)
+    {
+        var patient = await _context.Patients.FindAsync(patientId);
+        if (patient == null)
+            return false;
+
+        patient.PhotoUrl = photoUrl;
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

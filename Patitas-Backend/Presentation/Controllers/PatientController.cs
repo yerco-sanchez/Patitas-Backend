@@ -13,13 +13,16 @@ public class PatientsController : ControllerBase
 
     private readonly IPatientRepository _patientRepository;
     private readonly ICustomerRepository _customerRepository;
+    private readonly IWebHostEnvironment _environment;
 
     public PatientsController(
         IPatientRepository patientRepository,
-        ICustomerRepository customerRepository)
+        ICustomerRepository customerRepository,
+        IWebHostEnvironment environment)
     {
         _patientRepository = patientRepository;
         _customerRepository = customerRepository;
+        _environment = environment;
     }
 
     [HttpPost]
@@ -47,5 +50,51 @@ public class PatientsController : ControllerBase
             return StatusCode(500, $"Error creating patient: {ex.Message}");
         }
     }
+    [HttpPost("{id}/foto")]
+    public async Task<IActionResult> UploadPhoto(int id, IFormFile photo)
+    {
+        if (!await _patientRepository.ExistsAsync(id))
+            return NotFound($"Patient with ID {id} not found.");
 
+        if (photo == null || photo.Length == 0)
+            return BadRequest("No photo file provided.");
+
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+        var fileExtension = Path.GetExtension(photo.FileName).ToLowerInvariant();
+
+        if (!allowedExtensions.Contains(fileExtension))
+            return BadRequest("Invalid file type. Only JPG, PNG and GIF files are allowed.");
+
+        if (photo.Length > 5 * 1024 * 1024)
+            return BadRequest("File size exceeds 5MB limit.");
+
+        try
+        {
+            var contentRoot = _environment.ContentRootPath;
+            var webRootPath = _environment.WebRootPath ?? Path.Combine(contentRoot, "wwwroot");
+
+            var uploadsFolder = Path.Combine(webRootPath, "uploads", "patients");
+            Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = $"patient_{id}_{Guid.NewGuid()}{fileExtension}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await photo.CopyToAsync(stream);
+            }
+
+            var photoUrl = $"/uploads/patients/{fileName}";
+            var updated = await _patientRepository.UpdatePhotoAsync(id, photoUrl);
+
+            if (!updated)
+                return StatusCode(500, "Error updating patient photo URL.");
+
+            return Ok(new { photoUrl });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error uploading photo: {ex.Message}");
+        }
+    }
 }
