@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Patitas_Backend.Core.Entities;
+using Patitas_Backend.Core.Enumerables;
 using Patitas_Backend.Core.Interfaces;
 using Patitas_Backend.Infrastructure.Data;
 
@@ -90,4 +91,78 @@ public class PatientRepository : IPatientRepository
             .OrderBy(b => b)
             .ToListAsync();
     }
+
+    public async Task<(IEnumerable<Patient> Patients, int TotalCount)> SearchPatientsAsync(PatientSearchParameters parameters)
+    {
+        var query = _context.Patients
+            .Include(p => p.Customer)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(parameters.AnimalName))
+        {
+            query = query.Where(p => p.AnimalName.ToLower().Contains(parameters.AnimalName.ToLower()));
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.OwnerName))
+        {
+            var ownerNameLower = parameters.OwnerName.ToLower();
+            query = query.Where(p =>
+                (p.Customer!.FirstNames + " " + p.Customer.MiddleName + " " + p.Customer.LastName)
+                .ToLower().Contains(ownerNameLower) ||
+                (p.Customer!.FirstNames + " " + p.Customer.LastName)
+                .ToLower().Contains(ownerNameLower));
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.OwnerNationalId))
+        {
+            query = query.Where(p => p.Customer!.NationalId.Contains(parameters.OwnerNationalId));
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Species))
+        {
+            query = query.Where(p => p.Species.ToLower() == parameters.Species.ToLower());
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Breed))
+        {
+            query = query.Where(p => p.Breed != null && p.Breed.ToLower() == parameters.Breed.ToLower());
+        }
+
+        if (parameters.MinAge.HasValue || parameters.MaxAge.HasValue)
+        {
+            var currentDate = DateTime.Today;
+
+            if (parameters.MinAge.HasValue)
+            {
+                var maxBirthDate = currentDate.AddYears(-parameters.MinAge.Value);
+                query = query.Where(p => p.BirthDate <= maxBirthDate);
+            }
+
+            if (parameters.MaxAge.HasValue)
+            {
+                var minBirthDate = currentDate.AddYears(-parameters.MaxAge.Value - 1);
+                query = query.Where(p => p.BirthDate > minBirthDate);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Status))
+        {
+            if (Enum.TryParse<CustomerStatus>(parameters.Status, true, out var status))
+            {
+                query = query.Where(p => p.Customer!.CustomerStatus == status);
+            }
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var patients = await query
+            .OrderBy(p => p.AnimalName)
+            .ThenBy(p => p.Customer!.FirstNames)
+            .Skip((parameters.Page - 1) * parameters.PageSize)
+            .Take(parameters.PageSize)
+            .ToListAsync();
+
+        return (patients, totalCount);
+    }
+
 }
