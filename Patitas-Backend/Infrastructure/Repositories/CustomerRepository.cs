@@ -17,6 +17,14 @@ public class CustomerRepository : ICustomerRepository
     {
         return await _context.Customers.ToListAsync();
     }
+
+    public async Task<Customer?> GetByIdAsync(int id)
+    {
+        return await _context.Customers
+            .Include(c => c.Patients)
+            .FirstOrDefaultAsync(c => c.CustomerId == id);
+    }
+
     public async Task<Customer> CreateAsync(Customer customer)
     {
         _context.Customers.Add(customer);
