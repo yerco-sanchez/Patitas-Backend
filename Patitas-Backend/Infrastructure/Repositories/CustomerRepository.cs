@@ -17,5 +17,27 @@ public class CustomerRepository : ICustomerRepository
     {
         return await _context.Customers.ToListAsync();
     }
+    public async Task<Customer> CreateAsync(Customer customer)
+    {
+        _context.Customers.Add(customer);
+        await _context.SaveChangesAsync();
+        return customer;
+    }
+    public async Task<bool> EmailExistsAsync(string email, int? excludeCustomerId = null)
+    {
+        var query = _context.Customers.Where(c => c.Email == email);
+        if (excludeCustomerId.HasValue)
+            query = query.Where(c => c.CustomerId != excludeCustomerId.Value);
 
+        return await query.AnyAsync();
+    }
+
+    public async Task<bool> NationalIdExistsAsync(string nationalId, int? excludeCustomerId = null)
+    {
+        var query = _context.Customers.Where(c => c.NationalId == nationalId);
+        if (excludeCustomerId.HasValue)
+            query = query.Where(c => c.CustomerId != excludeCustomerId.Value);
+
+        return await query.AnyAsync();
+    }
 }
