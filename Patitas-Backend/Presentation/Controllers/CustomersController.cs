@@ -21,17 +21,6 @@ public class CustomersController : ControllerBase
         return Ok(customers);
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult<Customer>> GetCustomer(int id)
-    {
-        var customer = await _repository.GetByIdAsync(id);
-
-        if (customer == null)
-            return NotFound($"Customer with ID {id} not found.");
-
-        return Ok(customer);
-    }
-
     [HttpPost]
     public async Task<ActionResult<Customer>> CreateCustomer(Customer customer)
     {
@@ -48,6 +37,6 @@ public class CustomersController : ControllerBase
 
         var createdCustomer = await _repository.CreateAsync(customer);
 
-        return CreatedAtAction(nameof(GetCustomer), new { id = createdCustomer.CustomerId }, createdCustomer);
+        return Ok(createdCustomer);
     }
 }
