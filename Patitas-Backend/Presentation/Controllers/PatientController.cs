@@ -80,6 +80,26 @@ public class PatientsController : ControllerBase
         }
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeletePatient(int id)
+    {
+        if (!await _patientRepository.ExistsAsync(id))
+            return NotFound($"Patient with ID {id} not found.");
+
+        try
+        {
+            var deleted = await _patientRepository.DeleteAsync(id);
+            if (!deleted)
+                return StatusCode(500, "Error deleting patient.");
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error deleting patient: {ex.Message}");
+        }
+    }
+
 
     [HttpPost("{id}/foto")]
     public async Task<IActionResult> UploadPhoto(int id, IFormFile photo)

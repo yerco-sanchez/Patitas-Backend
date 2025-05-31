@@ -42,6 +42,16 @@ public class PatientRepository : IPatientRepository
         return await _context.Patients.AnyAsync(p => p.PatientId == id);
     }
 
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var patient = await _context.Patients.FindAsync(id);
+        if (patient == null)
+            return false;
+
+        _context.Patients.Remove(patient);
+        await _context.SaveChangesAsync();
+        return true;
+    }
 
     public async Task<bool> AnimalNameExistsForCustomerAsync(string animalName, int customerId, int? excludePatientId = null)
     {
