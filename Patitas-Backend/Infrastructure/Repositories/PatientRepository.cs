@@ -1,0 +1,34 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Patitas_Backend.Core.Entities;
+using Patitas_Backend.Core.Interfaces;
+using Patitas_Backend.Infrastructure.Data;
+
+namespace Patitas_Backend.Infrastructure.Repositories;
+
+public class PatientRepository : IPatientRepository
+{
+    private readonly DataContext _context;
+
+    public PatientRepository(DataContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Patient> CreateAsync(Patient patient)
+    {
+        patient.RegisteredAt = DateTime.UtcNow;
+        _context.Patients.Add(patient);
+        await _context.SaveChangesAsync();
+        return patient;
+    }
+
+    public async Task<bool> AnimalNameExistsForCustomerAsync(string animalName, int customerId, int? excludePatientId = null)
+    {
+        var query = _context.Patients.Where(p => p.AnimalName == animalName && p.CustomerId == customerId);
+
+        if (excludePatientId.HasValue)
+            query = query.Where(p => p.PatientId != excludePatientId.Value);
+
+        return await query.AnyAsync();
+    }
+}
