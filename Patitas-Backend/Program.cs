@@ -1,11 +1,18 @@
 using Microsoft.EntityFrameworkCore;
+using Patitas_Backend.Core.Interfaces;
 using Patitas_Backend.Infrastructure.Data;
+using Patitas_Backend.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddDbContext<DataContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("LocalConnection")));
+
+
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+
+
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
