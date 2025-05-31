@@ -260,5 +260,28 @@ public class PatientsController : ControllerBase
             return StatusCode(500, $"Error performing advanced search: {ex.Message}");
         }
     }
+    [HttpGet("filtros")]
+    public async Task<ActionResult> GetSearchFilters()
+    {
+        try
+        {
+            var species = await _patientRepository.GetSpeciesAsync();
+            var breeds = await _patientRepository.GetBreedsAsync();
+            var statuses = Enum.GetNames<CustomerStatus>().ToList();
+
+            var filters = new
+            {
+                Species = species,
+                Breeds = breeds,
+                Statuses = statuses
+            };
+
+            return Ok(filters);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error retrieving search filters: {ex.Message}");
+        }
+    }
 
 }
