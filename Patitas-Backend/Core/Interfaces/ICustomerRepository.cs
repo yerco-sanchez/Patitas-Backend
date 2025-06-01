@@ -7,6 +7,8 @@ public interface ICustomerRepository
     Task<IEnumerable<Customer>> GetAllAsync();
     Task<Customer?> GetByIdAsync(int id);
     Task<Customer> CreateAsync(Customer customer);
+    Task<Customer> UpdateAsync(Customer customer);
     Task<bool> EmailExistsAsync(string email, int? excludeCustomerId = null);
     Task<bool> NationalIdExistsAsync(string nationalId, int? excludeCustomerId = null);
+    Task<bool> ExistsAsync(int id);
 }
