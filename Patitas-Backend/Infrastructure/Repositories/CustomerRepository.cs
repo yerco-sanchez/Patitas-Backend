@@ -39,6 +39,17 @@ public class CustomerRepository : ICustomerRepository
         return customer;
     }
 
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var customer = await _context.Customers.FindAsync(id);
+        if (customer == null)
+            return false;
+
+        _context.Customers.Remove(customer);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<bool> EmailExistsAsync(string email, int? excludeCustomerId = null)
     {
         var query = _context.Customers.Where(c => c.Email == email);

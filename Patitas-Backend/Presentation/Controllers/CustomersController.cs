@@ -82,4 +82,24 @@ public class CustomersController : ControllerBase
         }
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteCustomer(int id)
+    {
+        var exists = await _repository.ExistsAsync(id);
+        if (!exists)
+            return NotFound($"Customer with ID {id} not found.");
+
+        try
+        {
+            var deleted = await _repository.DeleteAsync(id);
+            if (deleted)
+                return NoContent();
+            else
+                return StatusCode(500, "Error deleting customer.");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error deleting customer: {ex.Message}");
+        }
+    }
 }
