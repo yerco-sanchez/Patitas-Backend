@@ -13,6 +13,14 @@ public class PatientRepository : IPatientRepository
     {
         _context = context;
     }
+    public async Task<IEnumerable<Patient>> GetPatientsByCustomerIdAsync(int customerId)
+    {
+        return await _context.Patients
+            .Where(p => p.CustomerId == customerId)
+            .Include(p => p.Customer)
+            .OrderBy(p => p.AnimalName)
+            .ToListAsync();
+    }
 
     public async Task<Patient> CreateAsync(Patient patient)
     {
