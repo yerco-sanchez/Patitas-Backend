@@ -14,4 +14,5 @@ public interface IPatientRepository
     Task<bool> UpdatePhotoAsync(int patientId, string photoUrl);
     Task<IEnumerable<string>> GetSpeciesAsync();
     Task<IEnumerable<string>> GetBreedsAsync();
+    Task<(IEnumerable<Patient> Patients, int TotalCount)> SearchPatientsAsync(PatientSearchParameters parameters);
 }
