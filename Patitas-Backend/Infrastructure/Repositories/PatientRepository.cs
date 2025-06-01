@@ -72,4 +72,22 @@ public class PatientRepository : IPatientRepository
         await _context.SaveChangesAsync();
         return true;
     }
+    public async Task<IEnumerable<string>> GetSpeciesAsync()
+    {
+        return await _context.Patients
+            .Select(p => p.Species)
+            .Distinct()
+            .OrderBy(s => s)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<string>> GetBreedsAsync()
+    {
+        return await _context.Patients
+            .Where(p => !string.IsNullOrEmpty(p.Breed))
+            .Select(p => p.Breed)
+            .Distinct()
+            .OrderBy(b => b)
+            .ToListAsync();
+    }
 }
