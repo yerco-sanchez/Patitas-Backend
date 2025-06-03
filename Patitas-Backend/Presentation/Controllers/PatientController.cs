@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Patitas_Backend.Core.Entities;
 using Patitas_Backend.Core.Enumerables;
 using Patitas_Backend.Core.Interfaces;
+using Patitas_Backend.Core.DTOs;
 using Patitas_Backend.Infrastructure.Repositories;
+using Patitas_Backend.Core.Mappers;
 
 namespace Patitas_Backend.Presentation.Controllers;
 
@@ -11,7 +13,6 @@ namespace Patitas_Backend.Presentation.Controllers;
 [Route("api/[controller]")]
 public class PatientsController : ControllerBase
 {
-
     private readonly IPatientRepository _patientRepository;
     private readonly ICustomerRepository _customerRepository;
     private readonly IWebHostEnvironment _environment;
@@ -26,25 +27,94 @@ public class PatientsController : ControllerBase
         _environment = environment;
     }
 
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<PatientDto>>> GetAllPatients()
+    {
+        try
+        {
+            var patients = await _patientRepository.GetAllPatientsAsync();
+            return Ok(patients.ToDto());
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error retrieving patients: {ex.Message}");
+        }
+    }
+
+    [HttpGet("deleted")]
+    public async Task<ActionResult<IEnumerable<PatientDto>>> GetDeletedPatients()
+    {
+        try
+        {
+            var patients = await _patientRepository.GetDeletedPatientsAsync();
+            return Ok(patients.ToDto());
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error retrieving deleted patients: {ex.Message}");
+        }
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<PatientDto>> GetPatient(int id)
+    {
+        try
+        {
+            var patient = await _patientRepository.GetByIdAsync(id);
+            if (patient == null)
+                return NotFound($"Patient with ID {id} not found.");
+
+            return Ok(patient.ToDto());
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error retrieving patient: {ex.Message}");
+        }
+    }
+
+    [HttpGet("customer/{customerId}")]
+    public async Task<ActionResult<IEnumerable<PatientDto>>> GetPatientsByCustomer(int customerId)
+    {
+        try
+        {
+            if (!await _customerRepository.ExistsAsync(customerId))
+                return BadRequest($"Customer with ID {customerId} does not exist.");
+
+            var patients = await _patientRepository.GetPatientsByCustomerIdAsync(customerId);
+            return Ok(patients.ToDto());
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error retrieving patients: {ex.Message}");
+        }
+    }
+
     [HttpPost]
-    public async Task<ActionResult<Patient>> CreatePatient(Patient patient)
+    public async Task<ActionResult<PatientDto>> CreatePatient(PatientDto patientDto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        if (!await _customerRepository.ExistsAsync(patient.CustomerId))
-            return BadRequest($"Customer with ID {patient.CustomerId} does not exist.");
+        if (!await _customerRepository.ExistsAsync(patientDto.CustomerId))
+            return BadRequest($"Customer with ID {patientDto.CustomerId} does not exist.");
 
-        if (await _patientRepository.AnimalNameExistsForCustomerAsync(patient.AnimalName, patient.CustomerId))
-            return Conflict($"A patient with name '{patient.AnimalName}' already exists for this customer.");
+        if (await _patientRepository.AnimalNameExistsForCustomerAsync(patientDto.AnimalName, patientDto.CustomerId))
+            return Conflict($"A patient with name '{patientDto.AnimalName}' already exists for this customer.");
 
         try
         {
+            var patient = patientDto.ToEntity();
             patient.PatientId = 0;
             patient.RegisteredBy = "System";
 
             var createdPatient = await _patientRepository.CreateAsync(patient);
-            return Ok();
+            var createdPatientDto = createdPatient.ToDto();
+
+            return CreatedAtAction(nameof(GetPatient), new { id = createdPatient.PatientId }, createdPatientDto);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
@@ -53,9 +123,9 @@ public class PatientsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdatePatient(int id, Patient patient)
+    public async Task<IActionResult> UpdatePatient(int id, PatientDto patientDto)
     {
-        if (id != patient.PatientId)
+        if (id != patientDto.PatientId)
             return BadRequest("ID in URL does not match patient ID.");
 
         if (!ModelState.IsValid)
@@ -64,16 +134,21 @@ public class PatientsController : ControllerBase
         if (!await _patientRepository.ExistsAsync(id))
             return NotFound($"Patient with ID {id} not found.");
 
-        if (!await _customerRepository.ExistsAsync(patient.CustomerId))
-            return BadRequest($"Customer with ID {patient.CustomerId} does not exist.");
+        if (!await _customerRepository.ExistsAsync(patientDto.CustomerId))
+            return BadRequest($"Customer with ID {patientDto.CustomerId} does not exist.");
 
-        if (await _patientRepository.AnimalNameExistsForCustomerAsync(patient.AnimalName, patient.CustomerId, id))
-            return Conflict($"A patient with name '{patient.AnimalName}' already exists for this customer.");
+        if (await _patientRepository.AnimalNameExistsForCustomerAsync(patientDto.AnimalName, patientDto.CustomerId, id))
+            return Conflict($"A patient with name '{patientDto.AnimalName}' already exists for this customer.");
 
         try
         {
+            var patient = patientDto.ToEntity();
             await _patientRepository.UpdateAsync(patient);
             return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
@@ -89,7 +164,7 @@ public class PatientsController : ControllerBase
 
         try
         {
-            var deleted = await _patientRepository.DeleteAsync(id);
+            var deleted = await _patientRepository.DeleteAsync(id, "System");
             if (!deleted)
                 return StatusCode(500, "Error deleting patient.");
 
@@ -101,6 +176,22 @@ public class PatientsController : ControllerBase
         }
     }
 
+    [HttpPost("{id}/restore")]
+    public async Task<IActionResult> RestorePatient(int id)
+    {
+        try
+        {
+            var restored = await _patientRepository.RestoreAsync(id, "System");
+            if (!restored)
+                return NotFound($"Patient with ID {id} not found or not deleted.");
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error restoring patient: {ex.Message}");
+        }
+    }
 
     [HttpPost("{id}/foto")]
     public async Task<IActionResult> UploadPhoto(int id, IFormFile photo)
@@ -206,31 +297,7 @@ public class PatientsController : ControllerBase
 
             var response = new
             {
-                Data = patients.Select(p => new
-                {
-                    p.PatientId,
-                    p.AnimalName,
-                    p.Species,
-                    p.Breed,
-                    p.Gender,
-                    p.Age,
-                    p.Weight,
-                    p.Classification,
-                    p.PhotoUrl,
-                    p.RegisteredAt,
-                    Owner = new
-                    {
-                        p.Customer!.CustomerId,
-                        p.Customer.FirstNames,
-                        p.Customer.MiddleName,
-                        p.Customer.LastName,
-                        FullName = $"{p.Customer.FirstNames} {p.Customer.MiddleName} {p.Customer.LastName}".Trim(),
-                        p.Customer.NationalId,
-                        p.Customer.Phone,
-                        p.Customer.Email,
-                        p.Customer.CustomerStatus
-                    }
-                }),
+                Data = patients.ToDto(),
                 Pagination = new
                 {
                     CurrentPage = page,
@@ -260,6 +327,7 @@ public class PatientsController : ControllerBase
             return StatusCode(500, $"Error performing advanced search: {ex.Message}");
         }
     }
+
     [HttpGet("filtros")]
     public async Task<ActionResult> GetSearchFilters()
     {
@@ -268,12 +336,16 @@ public class PatientsController : ControllerBase
             var species = await _patientRepository.GetSpeciesAsync();
             var breeds = await _patientRepository.GetBreedsAsync();
             var statuses = Enum.GetNames<CustomerStatus>().ToList();
+            var genders = Enum.GetNames<Gender>().ToList();
+            var classifications = Enum.GetNames<Classification>().ToList();
 
             var filters = new
             {
                 Species = species,
                 Breeds = breeds,
-                Statuses = statuses
+                Statuses = statuses,
+                Genders = genders,
+                Classifications = classifications
             };
 
             return Ok(filters);
@@ -283,5 +355,4 @@ public class PatientsController : ControllerBase
             return StatusCode(500, $"Error retrieving search filters: {ex.Message}");
         }
     }
-
 }

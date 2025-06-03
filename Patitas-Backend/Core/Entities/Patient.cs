@@ -5,7 +5,6 @@ using Patitas_Backend.Core.Enumerables;
 
 namespace Patitas_Backend.Core.Entities;
 
-
 [Index(nameof(AnimalName), nameof(CustomerId), IsUnique = true)]
 public class Patient
 {
@@ -40,14 +39,20 @@ public class Patient
     public Classification Classification { get; set; }
 
     [MaxLength(200)]
-    public string PhotoUrl { get; set; } = null!;
+    public string PhotoUrl { get; set; } = "";
 
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 
-    [MaxLength(50)]
+    [Required, MaxLength(50)]
     public string RegisteredBy { get; set; } = null!;
 
     [Required]
     public int CustomerId { get; set; }
+
     public Customer? Customer { get; set; }
+
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+    public string? DeletedBy { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }

@@ -13,10 +13,25 @@ builder.Services.AddDbContext<DataContext>(options =>
 
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<IPatientRepository, PatientRepository>();
+builder.Services.AddScoped<IMedicamentRepository, MedicamentRepository>();
+builder.Services.AddScoped<ITreatamentRepository, TreatamentRepository>();
+builder.Services.AddScoped<IMedicamentPrescriptionRepository, MedicamentPrescriptionRepository>();
 
 builder.Services.AddControllers().AddJsonOptions(x => x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+});
 
 var app = builder.Build();
 
@@ -37,6 +52,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("AllowAllOrigins");
 app.UseAuthorization();
 
 app.MapControllers();
